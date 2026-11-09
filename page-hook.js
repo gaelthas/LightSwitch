@@ -281,8 +281,27 @@
   document.addEventListener('load', scheduleScan, true);
   window.addEventListener('load', scheduleScan);
 
+  function systemPrefersDark() {
+    if (!nativeMatchMedia) return false;
+    try { return nativeMatchMedia('(prefers-color-scheme: dark)').matches; }
+    catch (_) { return false; }
+  }
+
   function reportStats() {
-    window.postMessage({ channel: STATS_CHANNEL, stats: ['matchMedia', 'storage', 'css-media'] }, '*');
+    window.postMessage({
+      channel: STATS_CHANNEL,
+      stats: ['matchMedia', 'storage', 'css-media'],
+      systemDark: systemPrefersDark()
+    }, '*');
+  }
+
+  if (nativeMatchMedia) {
+    try {
+      const systemQuery = nativeMatchMedia('(prefers-color-scheme: dark)');
+      const onSystemChange = () => reportStats();
+      if (systemQuery.addEventListener) systemQuery.addEventListener('change', onSystemChange);
+      else systemQuery.addListener(onSystemChange);
+    } catch (_) {}
   }
 
   window.addEventListener('message', event => {

@@ -31,7 +31,7 @@
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
       padding: 16px;
-      width: 230px;
+      width: 280px;
       background-color: var(--bg-color);
       color: var(--text-color);
       margin: 0;
@@ -81,6 +81,7 @@
       font-weight: 500;
       transition: all 0.2s ease;
       text-align: center;
+      white-space: nowrap;
     }
 
     .option input:checked + label {
@@ -154,23 +155,30 @@
   <div class="segmented-control">
     <div class="option">
       <input type="radio" id="system" name="theme" value="system" checked>
-      <label for="system">
+      <label for="system" title="按操作系统偏好强制网页亮色或暗色">
         <span class="icon">🌓</span>
         System
       </label>
     </div>
     <div class="option">
       <input type="radio" id="light" name="theme" value="light">
-      <label for="light">
+      <label for="light" title="始终强制亮色">
         <span class="icon">☀️</span>
         Light
       </label>
     </div>
     <div class="option">
       <input type="radio" id="dark" name="theme" value="dark">
-      <label for="dark">
+      <label for="dark" title="始终强制暗色">
         <span class="icon">🌙</span>
         Dark
+      </label>
+    </div>
+    <div class="option">
+      <input type="radio" id="website" name="theme" value="website">
+      <label for="website" title="插件完全不干预，由网页自身设置决定">
+        <span class="icon">🌐</span>
+        Website
       </label>
     </div>
   </div>
@@ -182,9 +190,10 @@
     </div>
     <select id="site-select" aria-label="当前站点设置">
       <option value="">跟随全局</option>
+      <option value="system">跟随系统</option>
       <option value="light">强制亮色</option>
       <option value="dark">强制暗色</option>
-      <option value="system">跟随系统</option>
+      <option value="website">跟随网页设置</option>
     </select>
   </div>
 

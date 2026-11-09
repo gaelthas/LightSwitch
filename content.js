@@ -3,7 +3,7 @@
 
   const CHANNEL = 'lightswitch:config';
   const STATS_CHANNEL = 'lightswitch:stats';
-  const VALID_THEMES = new Set(['system', 'light', 'dark']);
+  const VALID_MODES = new Set(['website', 'system', 'light', 'dark']);
 
   const ATTRS = [
     { name: 'data-theme', light: 'light', dark: 'dark', eager: true },
@@ -31,9 +31,10 @@
 
   const ATTR_FILTER = ['class', 'style', 'content', 'name'].concat(ATTRS.map(def => def.name));
 
-  let globalTheme = 'system';
+  let globalMode = 'website';
   let overrides = {};
   let theme = 'system';
+  let systemDark = false;
   let applying = false;
 
   const strategies = new Set();
@@ -44,9 +45,9 @@
   const inlineChanges = new Map();
   const observed = new WeakSet();
 
-  function normalize(value) {
-    if (value === 'default') return 'system';
-    return VALID_THEMES.has(value) ? value : 'system';
+  function normalizeMode(value) {
+    if (value === 'default') return 'website';
+    return VALID_MODES.has(value) ? value : 'website';
   }
 
   function currentHost() {
@@ -57,10 +58,17 @@
     return Object.prototype.hasOwnProperty.call(object, key);
   }
 
-  function computeTheme() {
+  function activeMode() {
     const host = currentHost();
-    if (host && hasOwn(overrides, host)) return normalize(overrides[host]);
-    return normalize(globalTheme);
+    if (host && hasOwn(overrides, host)) return normalizeMode(overrides[host]);
+    return normalizeMode(globalMode);
+  }
+
+  function computeTheme() {
+    const mode = activeMode();
+    if (mode === 'website') return 'system';
+    if (mode === 'system') return systemDark ? 'dark' : 'light';
+    return mode;
   }
 
   function broadcastConfig() {
@@ -202,7 +210,7 @@
   }
 
   function setTheme(next) {
-    const value = normalize(next);
+    const value = next === 'light' || next === 'dark' ? next : 'system';
     if (value === theme) {
       broadcastConfig();
       return;
@@ -223,10 +231,10 @@
 
   function refresh() {
     Promise.all([
-      readStorage('sync', { theme: 'system' }),
+      readStorage('sync', { theme: 'website' }),
       readStorage('local', { siteOverrides: {} })
     ]).then(([syncData, localData]) => {
-      globalTheme = normalize(syncData.theme);
+      globalMode = normalizeMode(syncData.theme);
       overrides = localData.siteOverrides || {};
       setTheme(computeTheme());
     });
@@ -236,6 +244,11 @@
     if (event.source !== window) return;
     const data = event.data;
     if (!data || data.channel !== STATS_CHANNEL || !Array.isArray(data.stats)) return;
+    if (typeof data.systemDark === 'boolean') {
+      const changed = data.systemDark !== systemDark;
+      systemDark = data.systemDark;
+      if (changed && activeMode() === 'system') setTheme(computeTheme());
+    }
     if (theme === 'system') return;
     for (const name of data.stats) strategies.add(name);
   });
@@ -244,10 +257,11 @@
     if (!message || message.type !== 'lightswitch:status' || window !== window.top) return;
     const host = currentHost();
     sendResponse({
+      mode: activeMode(),
       theme,
       host,
-      globalTheme,
-      override: hasOwn(overrides, host) ? normalize(overrides[host]) : '',
+      globalMode,
+      override: hasOwn(overrides, host) ? normalizeMode(overrides[host]) : '',
       strategies: Array.from(strategies)
     });
   });
@@ -255,6 +269,17 @@
   chrome.storage.onChanged.addListener((changes, area) => {
     if ((area === 'sync' && changes.theme) || (area === 'local' && changes.siteOverrides)) refresh();
   });
+
+  try {
+    const systemMql = window.matchMedia('(prefers-color-scheme: dark)');
+    systemDark = systemMql.matches;
+    const onSystemChange = event => {
+      systemDark = event.matches;
+      if (activeMode() === 'system') setTheme(computeTheme());
+    };
+    if (systemMql.addEventListener) systemMql.addEventListener('change', onSystemChange);
+    else systemMql.addListener(onSystemChange);
+  } catch (_) {}
 
   observeTargets();
   broadcastConfig();

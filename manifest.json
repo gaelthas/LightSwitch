@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "LightSwitch",
-  "version": "2.0.0",
-  "description": "Force light or dark mode on any website: class, data attribute, color-scheme, media query and site storage based themes.",
+  "version": "2.1.0",
+  "description": "System, Light, Dark or Website-native mode: force a theme on any website, or leave it completely untouched.",
   "permissions": ["storage", "tabs"],
   "action": {
     "default_popup": "popup.html"

@@ -2,6 +2,7 @@
   'use strict';
 
   const LABELS = {
+    website: '跟随网页设置',
     system: '跟随系统',
     light: '亮色',
     dark: '暗色',
@@ -15,8 +16,8 @@
   };
 
   function normalize(value) {
-    if (value === 'default') return 'system';
-    return ['system', 'light', 'dark'].indexOf(value) === -1 ? 'system' : value;
+    if (value === 'default') return 'website';
+    return ['website', 'system', 'light', 'dark'].indexOf(value) === -1 ? 'website' : value;
   }
 
   function getStorage(area, keys) {
@@ -63,13 +64,13 @@
     select.disabled = !host;
 
     const [syncData, localData] = await Promise.all([
-      getStorage('sync', { theme: 'system' }),
+      getStorage('sync', { theme: 'website' }),
       getStorage('local', { siteOverrides: {} })
     ]);
-    const globalTheme = normalize(syncData.theme);
+    const globalMode = normalize(syncData.theme);
     const overrides = localData.siteOverrides || {};
 
-    const radio = document.querySelector(`input[value="${globalTheme}"]`);
+    const radio = document.querySelector(`input[value="${globalMode}"]`);
     if (radio) radio.checked = true;
     if (host) select.value = hasOwn(overrides, host) ? normalize(overrides[host]) : '';
 
@@ -87,12 +88,15 @@
         statusEl.textContent = '此页面不受扩展控制';
         return;
       }
-      if (response.theme === 'system') {
-        statusEl.textContent = '当前站点未干预（跟随系统）';
+      if (response.mode === 'website' || (!response.mode && response.theme === 'system')) {
+        statusEl.textContent = '当前站点未干预（跟随网页设置）';
         return;
       }
       const list = (response.strategies || []).map(name => LABELS[name] || name);
-      statusEl.textContent = `强制${LABELS[response.theme]} · 已启用 ${list.length} 类兼容策略` +
+      const prefix = response.mode === 'system'
+        ? `跟随系统 · 当前强制${LABELS[response.theme]}`
+        : `强制${LABELS[response.theme]}`;
+      statusEl.textContent = `${prefix} · 已启用 ${list.length} 类兼容策略` +
         (list.length ? `：${list.join('、')}` : '');
     }
 
